@@ -1,13 +1,18 @@
-console.log("File started");
+const express = require("express");
+const mongoose = require("mongoose");
+require("dotenv").config();
 
-const express = require('express');
 const app = express();
 
-app.get("/", (req, res) => {
-    console.log("Route hit");
-    res.send("HELLO");
-});
+app.use(express.json());
 
-app.listen(3000, () => {
-    console.log("Server running on port 3000");
+mongoose.connect(process.env.MONGODB_URI)
+.then(() => console.log("MongoDB Connected"))
+.catch(err => console.log(err));
+
+const userRoutes = require("./routes/userRoutes");
+app.use("/api/users", userRoutes);
+
+app.listen(process.env.PORT, () => {
+    console.log(`Server running on port ${process.env.PORT}`);
 });
