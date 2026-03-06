@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getProblems, deleteProblem, updateProblem } from "../api/problemsApi";
 
-export default function ProblemsList({ refreshKey, selectedCategory }) {
+export default function ProblemsList({ refreshKey, selectedCategory, canManage }) {
   const [problems, setProblems] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ title: "", difficulty: "Easy", category: "" });
@@ -36,21 +36,18 @@ export default function ProblemsList({ refreshKey, selectedCategory }) {
 
   return (
     <div className="lc-card">
-      <h2 className="lc-title">
-        Problems {selectedCategory ? `• ${selectedCategory}` : ""}
-      </h2>
-
+      <h2 className="lc-title">Problems {selectedCategory ? `• ${selectedCategory}` : ""}</h2>
       <div className="lc-table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Title</th><th>Difficulty</th><th>Category</th><th>Actions</th>
+              <th>Title</th><th>Difficulty</th><th>Category</th>{canManage && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {problems.map((p) => (
               <tr key={p._id}>
-                {editingId === p._id ? (
+                {canManage && editingId === p._id ? (
                   <>
                     <td><input className="lc-input" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} /></td>
                     <td>
@@ -69,15 +66,19 @@ export default function ProblemsList({ refreshKey, selectedCategory }) {
                     <td>{p.title}</td>
                     <td><span className={badgeClass(p.difficulty)}>{p.difficulty}</span></td>
                     <td>{p.category}</td>
-                    <td className="lc-actions">
-                      <button className="lc-btn btn-blue" onClick={() => onEdit(p)}>Edit</button>
-                      <button className="lc-btn btn-red" onClick={() => onDelete(p._id)}>Delete</button>
-                    </td>
+                    {canManage && (
+                      <td className="lc-actions">
+                        <button className="lc-btn btn-blue" onClick={() => onEdit(p)}>Edit</button>
+                        <button className="lc-btn btn-red" onClick={() => onDelete(p._id)}>Delete</button>
+                      </td>
+                    )}
                   </>
                 )}
               </tr>
             ))}
-            {problems.length === 0 && <tr><td colSpan="4">No problems in this category.</td></tr>}
+            {problems.length === 0 && (
+              <tr><td colSpan={canManage ? 4 : 3}>No problems found.</td></tr>
+            )}
           </tbody>
         </table>
       </div>

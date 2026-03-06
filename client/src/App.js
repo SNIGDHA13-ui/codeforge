@@ -6,10 +6,13 @@ import AddProblem from "./components/AddProblem";
 import ProblemsList from "./components/ProblemsList";
 import CategoryTabs from "./components/CategoryTabs";
 import DailyStreakHover from "./components/DailyStreakHover";
+import LoginPage from "./components/LoginPage";
+import ProfileDropdown from "./components/ProfileDropdown";
 
 function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [auth, setAuth] = useState(() => JSON.parse(localStorage.getItem("auth") || "null"));
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem("theme");
     return saved ? JSON.parse(saved) : true;
@@ -22,14 +25,27 @@ function App() {
 
   const triggerRefresh = () => setRefreshKey((k) => k + 1);
 
+  const handleLogout = () => {
+    localStorage.removeItem("auth");
+    setAuth(null);
+  };
+
+  if (!auth?.token) {
+    return <LoginPage onAuth={setAuth} />;
+  }
+
+  const role = auth?.user?.role || "user";
+  const canManage = role === "admin";
+
   return (
     <div className="lc-shell">
       <header className="lc-topbar">
         <div className="lc-brand">CodeForge</div>
-        <div className="lc-sub">LeetCode-style Practice Tracker</div>
+        <div className="lc-sub">{canManage ? "Admin Panel" : "User Panel"}</div>
 
         <div className="lc-topbar-right">
           <DailyStreakHover onSolved={triggerRefresh} />
+          <ProfileDropdown user={auth.user} onLogout={handleLogout} />
           <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
             {isDark ? "☀️" : "🌙"}
           </button>
@@ -43,13 +59,17 @@ function App() {
         </section>
 
         <section className="lc-right">
-          <AddProblem onProblemAdded={triggerRefresh} />
+          {canManage && <AddProblem onProblemAdded={triggerRefresh} />}
           <CategoryTabs
             refreshKey={refreshKey}
             selectedCategory={selectedCategory}
             onSelect={setSelectedCategory}
           />
-          <ProblemsList refreshKey={refreshKey} selectedCategory={selectedCategory} />
+          <ProblemsList
+            refreshKey={refreshKey}
+            selectedCategory={selectedCategory}
+            canManage={canManage}
+          />
         </section>
       </main>
     </div>

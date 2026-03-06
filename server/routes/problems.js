@@ -1,89 +1,68 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const Problem = require("../models/Problem");
+const { authenticate, requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
 
+// Public: list problems
 router.get("/", async (req, res, next) => {
   try {
-    const { difficulty, category, search } = req.query;
-    const filter = {};
+    const { category = "", difficulty = "", q = "" } = req.query;
+    const query = {};
+    if (category) query.category = category;
+    if (difficulty) query.difficulty = difficulty;
+    if (q) query.title = { $regex: q, $options: "i" };
 
-    if (difficulty) filter.difficulty = difficulty;
-    if (category) filter.category = category;
-    if (search) filter.title = { $regex: search, $options: "i" };
-
-    const problems = await Problem.find(filter).sort({ createdAt: -1 });
-    res.json(problems);
-  } catch (err) {
-    next(err);
+    const rows = await Problem.find(query).sort({ createdAt: -1 });
+    res.json(rows);
+  } catch (e) {
+    next(e);
   }
 });
 
+// Public: get one
 router.get("/:id", async (req, res, next) => {
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid id" });
-    }
-
-    const problem = await Problem.findById(id);
-    if (!problem) return res.status(404).json({ message: "Problem not found" });
-
-    res.json(problem);
-  } catch (err) {
-    next(err);
+    const row = await Problem.findById(req.params.id);
+    if (!row) return res.status(404).json({ message: "Problem not found" });
+    res.json(row);
+  } catch (e) {
+    next(e);
   }
 });
 
-router.post("/", async (req, res, next) => {
+// Admin only: create
+router.post("/", authenticate, requireAdmin, async (req, res, next) => {
   try {
-    const { title, difficulty, category } = req.body;
-    const created = await Problem.create({ title, difficulty, category });
-    res.status(201).json(created);
-  } catch (err) {
-    if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message });
-    }
-    next(err);
+    const row = await Problem.create(req.body);
+    res.status(201).json(row);
+  } catch (e) {
+    next(e);
   }
 });
 
-router.put("/:id", async (req, res, next) => {
+// Admin only: update
+router.put("/:id", authenticate, requireAdmin, async (req, res, next) => {
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid id" });
-    }
-
-    const updated = await Problem.findByIdAndUpdate(id, req.body, {
+    const row = await Problem.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
-
-    if (!updated) return res.status(404).json({ message: "Problem not found" });
-    res.json(updated);
-  } catch (err) {
-    if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message });
-    }
-    next(err);
+    if (!row) return res.status(404).json({ message: "Problem not found" });
+    res.json(row);
+  } catch (e) {
+    next(e);
   }
 });
 
-router.delete("/:id", async (req, res, next) => {
+// Admin only: delete
+router.delete("/:id", authenticate, requireAdmin, async (req, res, next) => {
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid id" });
-    }
-
-    const deleted = await Problem.findByIdAndDelete(id);
-    if (!deleted) return res.status(404).json({ message: "Problem not found" });
-
-    res.json({ message: "Deleted", problem: deleted });
-  } catch (err) {
-    next(err);
+    const row = await Problem.findByIdAndDelete(req.params.id);
+    if (!row) return res.status(404).json({ message: "Problem not found" });
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
   }
 });
 
